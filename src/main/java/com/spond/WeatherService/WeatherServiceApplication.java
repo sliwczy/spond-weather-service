@@ -18,13 +18,4 @@ public class WeatherServiceApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(WeatherServiceApplication.class, args);
 	}
-
-//	@Bean
-//	public CommandLineRunner run(WeatherService weatherService) {
-//
-//		return args -> {
-//			var optionalWeather = weatherService.getWeatherInfo(60.000, 60.000, LocalDateTime.now());
-//			log.info(optionalWeather.map(Object::toString).orElse("No weather forecast for given parameters"));
-//		};
-//	}
 }
