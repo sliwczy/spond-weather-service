@@ -1,6 +1,5 @@
 package com.spond.WeatherService.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +19,7 @@ public class WeatherService {
 
     private static final String API_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact";
 
-    public Optional<String> getWeatherInfo(double latitude, double longitude, LocalDateTime forecastDateTime) throws JsonProcessingException {
+    public Optional<String> getWeatherInfo(double latitude, double longitude, LocalDateTime forecastDateTime) {
         //convert event time to the desired forecast
         //handle status for 404, 403, 500 etc
         //there still may be null response if there is no forecast for a given day

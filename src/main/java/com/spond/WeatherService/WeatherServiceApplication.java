@@ -19,7 +19,7 @@ public class WeatherServiceApplication {
 	@Bean
 	public CommandLineRunner run(WeatherService weatherService) {
 		return args -> {
-			weatherService.queryApi();
+			weatherService.getWeatherInfo(60.000, 60.000, LocalDateTime.now());
 		};
 	}
 }
