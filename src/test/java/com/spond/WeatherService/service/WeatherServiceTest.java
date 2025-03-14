@@ -1,5 +1,7 @@
 package com.spond.WeatherService.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.spond.WeatherService.domain.WeatherForecast;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class WeatherServiceTest {
@@ -27,23 +30,46 @@ class WeatherServiceTest {
     @Mock
     RestTemplate restTemplate;
 
-    @Test
-    public void testResponseOK() {
-        Mockito.when(restTemplate.getForEntity(Mockito.anyString(), Mockito.eq(String.class)))
-                .thenReturn(ResponseEntity.ok().body("weather forecast"));
+    @Mock
+    WeatherResponseMappingService weatherResponseMappingService;
 
-        Optional<String> response = weatherService.getWeatherInfo(0.5000, 0.500, LocalDateTime.now());
+    @Test
+    public void testResponseOK() throws JsonProcessingException {
+        //given
+        when(restTemplate.getForEntity(anyString(), eq(String.class)))
+                .thenReturn(ResponseEntity.ok().body("ok"));
+        when(weatherResponseMappingService.jsonToWeatherObj(any(String.class), any(LocalDateTime.class)))
+                .thenReturn(
+                        Optional.of(
+                                new WeatherForecast(10, 1.5, LocalDateTime.now())));
+        //when
+        var response = weatherService.getWeatherInfo(0.5000, 0.500, LocalDateTime.now());
+        //then
         assertTrue(response.isPresent());
     }
 
 
     @Test
     public void testResponseErrorCode() {
-        var errorResponse = ResponseEntity.internalServerError().body("error");
+        when(restTemplate.getForEntity(anyString(), eq(String.class)))
+                .thenReturn(ResponseEntity.internalServerError().body("error"));
 
-        Mockito.when(restTemplate.getForEntity(Mockito.anyString(), Mockito.eq(String.class))).thenReturn(errorResponse);
         assertThrows(HttpServerErrorException.class,
                 () -> weatherService.getWeatherInfo(0.5000, 0.500, LocalDateTime.now()));
 
+    }
+
+    //todo: if there's ever any handling of JsonProcessingException in the WeatherService, this test will make sense
+    //todo: for now it looks like we're testing mockito; added it only to show how moving mapping logic to separate service
+    //todo: simplifies testing (no need to craft response to match format, mapping is decoupled)
+    @Test
+    public void testMalformedResponse() throws JsonProcessingException {
+        when(restTemplate.getForEntity(anyString(), eq(String.class)))
+                .thenReturn(ResponseEntity.ok().body("malformed"));
+        when(weatherResponseMappingService.jsonToWeatherObj(any(String.class), any(LocalDateTime.class))).thenThrow(
+                JsonProcessingException.class
+        );
+
+        assertThrows(JsonProcessingException.class, () -> weatherService.getWeatherInfo(0.5000, 0.500, LocalDateTime.now()));
     }
 }
