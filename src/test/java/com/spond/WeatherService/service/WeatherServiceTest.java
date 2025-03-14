@@ -1,16 +1,12 @@
 package com.spond.WeatherService.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.spond.WeatherService.domain.WeatherForecast;
+import com.spond.WeatherService.dto.WeatherForecastDTO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -41,7 +37,7 @@ class WeatherServiceTest {
         when(weatherResponseMappingService.jsonToWeatherObj(any(String.class), any(LocalDateTime.class)))
                 .thenReturn(
                         Optional.of(
-                                new WeatherForecast(10, 1.5, LocalDateTime.now())));
+                                new WeatherForecastDTO(10, 1.5, LocalDateTime.now())));
         //when
         var response = weatherService.getWeatherInfo(0.5000, 0.500, LocalDateTime.now());
         //then

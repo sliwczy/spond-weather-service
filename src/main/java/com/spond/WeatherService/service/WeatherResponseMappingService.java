@@ -3,7 +3,7 @@ package com.spond.WeatherService.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spond.WeatherService.domain.WeatherForecast;
+import com.spond.WeatherService.dto.WeatherForecastDTO;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -17,7 +17,7 @@ import java.util.stream.StreamSupport;
 @Service
 public class WeatherResponseMappingService {
 
-    public Optional<WeatherForecast> jsonToWeatherObj(String responseJson, LocalDateTime requestedForecastTime) throws JsonProcessingException {
+    public Optional<WeatherForecastDTO> jsonToWeatherObj(String responseJson, LocalDateTime requestedForecastTime) throws JsonProcessingException {
 
         var timeSeries = new ObjectMapper().readTree(responseJson)
                 .path("properties")
@@ -37,7 +37,7 @@ public class WeatherResponseMappingService {
         if (temperature.isMissingNode() || windSpeed.isMissingNode()) {
             return Optional.empty();
         }
-        return Optional.of(new WeatherForecast(temperature.asDouble(), windSpeed.asDouble(), updatedAt));
+        return Optional.of(new WeatherForecastDTO(temperature.asDouble(), windSpeed.asDouble(), updatedAt));
     }
 
     //todo: later days contain less entries, write a code that will match the closest hour

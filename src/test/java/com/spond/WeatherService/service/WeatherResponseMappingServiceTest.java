@@ -1,11 +1,10 @@
 package com.spond.WeatherService.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.spond.WeatherService.domain.WeatherForecast;
+import com.spond.WeatherService.dto.WeatherForecastDTO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.BufferedReader;
@@ -26,7 +25,7 @@ class WeatherResponseMappingServiceTest {
     // if node matching works
     @Test
     public void testResponseInExpectedFormat() throws JsonProcessingException {
-        Optional<WeatherForecast> weatherForecast = mappingService.jsonToWeatherObj(
+        Optional<WeatherForecastDTO> weatherForecast = mappingService.jsonToWeatherObj(
                 getJsonSample("sample_response.json"),
                 LocalDateTime.parse("2025-03-14T12:00:00")
         );
