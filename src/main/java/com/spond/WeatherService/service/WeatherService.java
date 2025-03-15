@@ -10,10 +10,8 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 
@@ -28,13 +26,21 @@ public class WeatherService {
     private final Semaphore semaphore = new Semaphore(20);
 
     private static final String API_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact";
+    public static final String USER_AGENT_HEADER = "User-Agent";
+    private static final String USER_AGENT_VALUE = "SpondWeatherService github.com/sliwczy/spond-weather-service";
 
     @RabbitListener(queues = QueueConfig.WEATHER_REQUEST_QUEUE)
     public void getWeatherInfo(WeatherForecastDTO dto) {
         var url = getUrl(dto.getLocation().getLatitude(), dto.getLocation().getLongitude());
 
-        webClient.get().uri(url).retrieve().toEntity(String.class)
-                .subscribe((response) -> handleResponse(response, dto), (error) -> handleError(error, dto));
+        webClient.get().uri(url)
+                //todo: according to met.no ToS pt.1 : "Identify yourself";
+                .header(USER_AGENT_HEADER, USER_AGENT_VALUE)
+                .retrieve().toEntity(String.class)
+                .subscribe(
+                        (response) -> handleResponse(response, dto),
+                        (error) -> handleError(error, dto)
+                );
     }
 
     private String getUrl(double latitude, double longitude) {
