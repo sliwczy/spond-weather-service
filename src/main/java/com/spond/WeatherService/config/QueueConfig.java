@@ -1,0 +1,35 @@
+package com.spond.WeatherService.config;
+
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+
+@Configuration
+public class QueueConfig {
+    public static final String WEATHER_RESPONSE_QUEUE = "weather_response_queue";
+    public static final String WEATHER_REQUEST_QUEUE = "weather_queue";
+
+    //todo: can be also regular java BlockingQueue; depends if WeatherService is to be polled over the network or is it just
+    //todo: a small addition to in the Event service
+    @Bean
+    public Queue requestQueue() {
+            return new Queue(WEATHER_REQUEST_QUEUE, false);
+    }
+
+    @Bean
+    public Queue responseQueue() {
+        return new Queue(WEATHER_RESPONSE_QUEUE, false);
+    }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory batchContainerFactory(ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setBatchSize(20);
+        factory.setPrefetchCount(20);
+        return factory;
+    }
+}

@@ -1,6 +1,7 @@
 package com.spond.WeatherService.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.spond.WeatherService.dto.Location;
 import com.spond.WeatherService.dto.WeatherForecastDTO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,19 +26,27 @@ class WeatherResponseMappingServiceTest {
     // if node matching works
     @Test
     public void testResponseInExpectedFormat() throws JsonProcessingException {
-        Optional<WeatherForecastDTO> weatherForecast = mappingService.jsonToWeatherObj(
-                getJsonSample("sample_response.json"),
-                LocalDateTime.parse("2025-03-14T12:00:00")
-        );
-        assertTrue(weatherForecast.isPresent());
-        assertEquals(4.1, weatherForecast.get().temperature());
-        assertEquals(4.3, weatherForecast.get().windSpeed());
+        WeatherForecastDTO dto = WeatherForecastDTO.builder()
+                .location(Location.builder().build())
+                .forecastTime(LocalDateTime.parse("2025-03-14T12:00:00"))
+                .errorMessage(Optional.empty())
+                .build();
+        WeatherForecastDTO weatherForecast = mappingService.jsonToWeatherObj(
+                getJsonSample("sample_response.json"), dto);
+
+        assertEquals(4.1, weatherForecast.getTemperature());
+        assertEquals(4.3, weatherForecast.getWindSpeed());
     }
 
     @Test
     public void testMalformedResponse() {
+        WeatherForecastDTO dto = WeatherForecastDTO.builder()
+                .location(Location.builder().build())
+                .forecastTime(LocalDateTime.parse("2025-03-14T12:00:00"))
+                .errorMessage(Optional.empty())
+                .build();
         assertThrows(JsonProcessingException.class,
-                () -> mappingService.jsonToWeatherObj("malformed", LocalDateTime.now()));
+                () -> mappingService.jsonToWeatherObj("malformed", dto));
     }
 
     private String getJsonSample(String fileName) {

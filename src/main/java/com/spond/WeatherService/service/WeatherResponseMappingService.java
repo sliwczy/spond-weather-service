@@ -1,5 +1,6 @@
 package com.spond.WeatherService.service;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,27 +18,33 @@ import java.util.stream.StreamSupport;
 @Service
 public class WeatherResponseMappingService {
 
-    public Optional<WeatherForecastDTO> jsonToWeatherObj(String responseJson, LocalDateTime requestedForecastTime) throws JsonProcessingException {
+    public WeatherForecastDTO jsonToWeatherObj(String responseJson, WeatherForecastDTO requestDto) throws JsonProcessingException {
 
         var timeSeries = new ObjectMapper().readTree(responseJson)
                 .path("properties")
                 .path("timeseries")
                 .spliterator();
-        Optional<JsonNode> optionalForecastRow = findForecastInTimeSeries(timeSeries, requestedForecastTime);
+        Optional<JsonNode> optionalForecastRow = findForecastInTimeSeries(timeSeries, requestDto.getForecastTime());
 
         if (optionalForecastRow.isEmpty()) {
-            return Optional.empty();
+            throw new JsonParseException("no weather forecast for a given time!");
         }
 
         JsonNode forecastNode = optionalForecastRow.get().path("data").path("instant").path("details");
         var temperature = forecastNode.path("air_temperature");
         var windSpeed = forecastNode.path("wind_speed");
-        var updatedAt = LocalDateTime.now();// or read something from that json
 
         if (temperature.isMissingNode() || windSpeed.isMissingNode()) {
-            return Optional.empty();
+            throw new JsonParseException("weather forecast information is missing in the response!");
         }
-        return Optional.of(new WeatherForecastDTO(temperature.asDouble(), windSpeed.asDouble(), updatedAt));
+        return WeatherForecastDTO.builder()
+                .uuid(requestDto.getUuid())
+                .location(requestDto.getLocation())
+                .forecastTime(requestDto.getForecastTime())
+                .temperature(temperature.asDouble())
+                .windSpeed(windSpeed.asDouble())
+                .errorMessage(Optional.empty())
+                .build();
     }
 
     //todo: later days contain less entries, write a code that will match the closest hour
