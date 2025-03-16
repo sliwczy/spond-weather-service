@@ -14,8 +14,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Service
@@ -23,13 +26,20 @@ import java.util.Optional;
 public class UpdateService {
 
     private final WeatherForecastRepository weatherForecastRepository;
-    private final WeatherService weatherService;
     private final RabbitTemplate rabbitTemplate;
 
     //todo: fixed rate could be set by a property to control DB polling rate
     @Scheduled(fixedRate = 20 * 1000)
     public void sendForUpdates() {
         List<WeatherForecast> expiredWeatherForecast = weatherForecastRepository.findExpiredWeatherForecast();
+        //todo: mocking, to test the rate limit
+        expiredWeatherForecast = new ArrayList<>();
+        for(int i=0; i< 40; i++) {
+           expiredWeatherForecast.add(weatherForecast());
+        }
+
+//        expiredWeatherForecast = List.of(
+//                weatherForecast(), weatherForecast(), weatherForecast(), weatherForecast(), weatherForecast());
 
         expiredWeatherForecast.forEach(wf -> rabbitTemplate.convertAndSend(QueueConfig.WEATHER_REQUEST_QUEUE,
                 WeatherForecastDTO.builder()
@@ -38,9 +48,12 @@ public class UpdateService {
                         .forecastTime(wf.getForecastTime())
                         .build()));
     }
+    //todo just for local test run, can be removed
+    private static WeatherForecast weatherForecast() {
+       return new WeatherForecast(UUID.randomUUID().toString(), 60.0, 50.0, 0, 0, LocalDateTime.now(), LocalDateTime.now());
+    }
 
     //todo: reading in batch from the queue in order to limit the amount of connections to the DB
-    @Scheduled(fixedRate = 20 * 1000)
     @RabbitListener(queues = QueueConfig.WEATHER_RESPONSE_QUEUE, containerFactory = "batchContainerFactory")
     public void updateForecasts(List<WeatherForecastDTO> weatherForecastDTOS) {
         List<WeatherForecast> forecastList = weatherForecastDTOS.stream()

@@ -22,16 +22,20 @@ public class WeatherService {
     private final RabbitTemplate rabbitTemplate;
     private final WebClient webClient;
     private final WeatherResponseMappingService weatherMappingService;
-    private final Semaphore semaphore = new Semaphore(20);
+    //todo rate limit based on tokens
+    private final Semaphore semaphore = new Semaphore(3);
 
     private static final String API_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact";
     public static final String USER_AGENT_HEADER = "User-Agent";
     private static final String USER_AGENT_VALUE = "SpondWeatherService github.com/sliwczy/spond-weather-service";
 
     @RabbitListener(queues = QueueConfig.WEATHER_REQUEST_QUEUE)
-    public void getWeatherInfo(WeatherForecastDTO dto) {
+    public void getWeatherInfo(WeatherForecastDTO dto) throws InterruptedException {
+        semaphore.acquire();
+        log.info("acquired token to proceed with weather request");
         var url = getUrl(dto.getLocation().getLatitude(), dto.getLocation().getLongitude());
 
+        log.info("sending request to {}", url);
         webClient.get().uri(url)
                 //todo: according to met.no ToS pt.1 : "Identify yourself";
                 .header(USER_AGENT_HEADER, USER_AGENT_VALUE)
@@ -61,14 +65,16 @@ public class WeatherService {
     protected void handleResponse(ResponseEntity<String> response, WeatherForecastDTO dto) {
         try {
             WeatherForecastDTO updatedDto = weatherMappingService.jsonToWeatherObj(response.getBody(), dto);
+            log.info("updated weather: {}", updatedDto);
             rabbitTemplate.convertAndSend(QueueConfig.WEATHER_RESPONSE_QUEUE, updatedDto);
         } catch (JsonProcessingException e) {
             handleError(e, dto);
         }
     }
 
-    @Scheduled(fixedRate = 1000)
+    //todo: should model 20/s rate as requrired by API, but just for local testing I put these numbers
+    @Scheduled(fixedRate = 5000)
     private void releasePermits() {
-        semaphore.release(20);
+        semaphore.release(3);
     }
 }
