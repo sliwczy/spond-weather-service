@@ -45,8 +45,8 @@ public class UpdateService {
     public void updateForecasts(List<WeatherForecastDTO> weatherForecastDTOS) {
         List<WeatherForecast> forecastList = weatherForecastDTOS.stream()
                 .filter(dto -> {
-                    if (dto.getErrorMessage().isPresent()) {
-                        log.info(dto.getErrorMessage().get());
+                    if (dto.isHasError()) {
+                        log.info(dto.getErrorMessage());
                         return false;
                     }
                     return true;

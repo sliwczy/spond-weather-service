@@ -5,13 +5,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Builder
 @Data
 @AllArgsConstructor
-public class WeatherForecastDTO {
+public class WeatherForecastDTO implements Serializable {
+    @Serial
+    private static final long serialVersionUID = -4226275314805486112L;
     private final String uuid;
     @NonNull
     private final Location location;
@@ -19,6 +23,6 @@ public class WeatherForecastDTO {
     private double windSpeed;
     @NonNull
     final LocalDateTime forecastTime;
-    @NonNull
-    private final Optional<String> errorMessage;
+    private final boolean hasError;
+    private final String errorMessage;
 }

@@ -43,7 +43,7 @@ public class WeatherResponseMappingService {
                 .forecastTime(requestDto.getForecastTime())
                 .temperature(temperature.asDouble())
                 .windSpeed(windSpeed.asDouble())
-                .errorMessage(Optional.empty())
+                .hasError(false)
                 .build();
     }
 

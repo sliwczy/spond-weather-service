@@ -12,7 +12,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.Optional;
 import java.util.concurrent.Semaphore;
 
 @Slf4j
@@ -51,7 +50,11 @@ public class WeatherService {
 
     private void handleError(Throwable error, WeatherForecastDTO dto) {
         //todo: we let the client decide what to do in case e.g. Weather API is down. Client might decide to pause or stop sending messages
-        WeatherForecastDTO errorDto = WeatherForecastDTO.builder().uuid(dto.getUuid()).errorMessage(Optional.of(error.getMessage())).build();
+        log.info("error occurred: {}", error.getMessage());
+        WeatherForecastDTO errorDto = WeatherForecastDTO.builder()
+                .uuid(dto.getUuid())
+                .hasError(true)
+                .errorMessage(error.getMessage()).build();
         rabbitTemplate.convertAndSend(QueueConfig.WEATHER_RESPONSE_QUEUE, errorDto);
     }
 
