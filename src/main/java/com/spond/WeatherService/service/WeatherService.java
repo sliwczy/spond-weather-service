@@ -1,8 +1,10 @@
 package com.spond.WeatherService.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.spond.WeatherService.config.QueueConfig;
-import com.spond.WeatherService.dto.WeatherForecastDTO;
+import com.spond.WeatherService.dto.MetWeatherResponseDTO;
+import com.spond.WeatherService.dto.WeatherRequestDTO;
+import com.spond.WeatherService.dto.WeatherResponseDTO;
+import com.spond.WeatherService.exception.NoForecastException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -12,6 +14,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Semaphore;
 
 @Slf4j
@@ -21,7 +26,6 @@ public class WeatherService {
 
     private final RabbitTemplate rabbitTemplate;
     private final WebClient webClient;
-    private final WeatherResponseMappingService weatherMappingService;
     private final Semaphore semaphore = new Semaphore(3);
 
     private static final String API_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact";
@@ -29,18 +33,19 @@ public class WeatherService {
     private static final String USER_AGENT_VALUE = "SpondWeatherService github.com/sliwczy/spond-weather-service";
 
     @RabbitListener(queues = QueueConfig.WEATHER_REQUEST_QUEUE)
-    public void getWeatherInfo(WeatherForecastDTO dto) throws InterruptedException {
+    public void getWeatherInfo(WeatherRequestDTO requestDTO) throws InterruptedException {
         semaphore.acquire();
         log.info("acquired token to proceed with weather request");
-        var url = getUrl(dto.getLocation().getLatitude(), dto.getLocation().getLongitude());
+        var url = getUrl(requestDTO.getLocationDTO().getLatitude(), requestDTO.getLocationDTO().getLongitude());
 
         log.info("sending request to {}", url);
         webClient.get().uri(url)
-                .header(USER_AGENT_HEADER, USER_AGENT_VALUE)//todo: according to met.no ToS pt.1 : "Identify yourself";
-                .retrieve().toEntity(String.class)
+                .header(USER_AGENT_HEADER, USER_AGENT_VALUE)//according to met.no ToS pt.1 : "Identify yourself";
+                .retrieve()
+                .toEntity(MetWeatherResponseDTO.class)
                 .subscribe(
-                        (response) -> handleResponse(response, dto),
-                        (error) -> handleError(error, dto)
+                        (response) -> handleResponse(response, requestDTO),
+                        (error) -> handleError(error, requestDTO)
                 );
     }
 
@@ -50,27 +55,44 @@ public class WeatherService {
                 .append("&lon=").append(longitude).toString();
     }
 
-    private void handleError(Throwable error, WeatherForecastDTO dto) {
+    private void handleError(Throwable error, WeatherRequestDTO originalRequestDTO) {
         log.info("error occurred: {}", error.getMessage());
-        WeatherForecastDTO errorDto = WeatherForecastDTO.builder()
-                .uuid(dto.getUuid())
+        WeatherResponseDTO errorDto = WeatherResponseDTO.builder()
+                .uuid(originalRequestDTO.getUuid())
                 .hasError(true)
                 .errorMessage(error.getMessage()).build();
         rabbitTemplate.convertAndSend(QueueConfig.WEATHER_RESPONSE_QUEUE, errorDto);
     }
 
-    protected void handleResponse(ResponseEntity<String> response, WeatherForecastDTO dto) {
-        try {
-            WeatherForecastDTO updatedDto = weatherMappingService.jsonToWeatherObj(response.getBody(), dto);
-            log.info("updated weather: {}", updatedDto);
-            rabbitTemplate.convertAndSend(QueueConfig.WEATHER_RESPONSE_QUEUE, updatedDto);
-        } catch (JsonProcessingException e) {
-            handleError(e, dto);
+    protected void handleResponse(ResponseEntity<MetWeatherResponseDTO> metResponse, WeatherRequestDTO originalRequestDTO) {
+        if (!metResponse.hasBody()) {
+            handleError(new NoForecastException("No response from the API."), originalRequestDTO);
         }
+
+        Optional<MetWeatherResponseDTO.MetForecast> forecast = findForecastInTimeSeries(metResponse.getBody().getTimeSeries(), originalRequestDTO.getForecastTime());
+        if (forecast.isEmpty()) {
+            handleError(new NoForecastException("Service returned forecast but none was found for a given time."), originalRequestDTO);
+        }
+
+        WeatherResponseDTO responseDto = WeatherResponseDTO.builder()
+                .uuid(originalRequestDTO.getUuid())
+                .locationDTO(originalRequestDTO.getLocationDTO())
+                .windSpeed(forecast.get().getWindSpeed())
+                .temperature(forecast.get().getTemperature())
+                .hasError(false)
+                .build();
+        log.info("updated weather: {}", responseDto);
+        rabbitTemplate.convertAndSend(QueueConfig.WEATHER_RESPONSE_QUEUE, responseDto);
     }
 
     @Scheduled(fixedRate = 5000)
     private void releasePermits() {
         semaphore.release(3);
+    }
+
+    private Optional<MetWeatherResponseDTO.MetForecast> findForecastInTimeSeries(List<MetWeatherResponseDTO.MetForecast> timeSeries, LocalDateTime requestedForecastTime) {
+        return timeSeries.stream()
+                .filter(entry -> entry.getForecastTime().equals(requestedForecastTime))
+                .findFirst();
     }
 }

@@ -1,9 +1,9 @@
 package com.spond.WeatherService.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.spond.WeatherService.config.QueueConfig;
-import com.spond.WeatherService.dto.Location;
-import com.spond.WeatherService.dto.WeatherForecastDTO;
+import com.spond.WeatherService.dto.LocationDTO;
+import com.spond.WeatherService.dto.WeatherRequestDTO;
+import com.spond.WeatherService.dto.WeatherResponseDTO;
 import com.spond.WeatherService.entity.WeatherForecast;
 import com.spond.WeatherService.repository.WeatherForecastRepository;
 import lombok.AllArgsConstructor;
@@ -16,9 +16,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.IntStream;
 
 @Slf4j
 @Service
@@ -42,9 +40,9 @@ public class UpdateService {
 //                weatherForecast(), weatherForecast(), weatherForecast(), weatherForecast(), weatherForecast());
 
         expiredWeatherForecast.forEach(wf -> rabbitTemplate.convertAndSend(QueueConfig.WEATHER_REQUEST_QUEUE,
-                WeatherForecastDTO.builder()
+                WeatherRequestDTO.builder()
                         .uuid(wf.getUuid())
-                        .location(Location.builder().latitude(wf.getLatitude()).longitude(wf.getLongitude()).build())
+                        .locationDTO(LocationDTO.builder().latitude(wf.getLatitude()).longitude(wf.getLongitude()).build())
                         .forecastTime(wf.getForecastTime())
                         .build()));
     }
@@ -55,12 +53,12 @@ public class UpdateService {
 
     //todo: reading in batch from the queue in order to limit the amount of connections to the DB
     @RabbitListener(queues = QueueConfig.WEATHER_RESPONSE_QUEUE, containerFactory = "batchContainerFactory")
-    public void updateForecasts(List<WeatherForecastDTO> weatherForecastDTOS) {
-        List<WeatherForecast> forecastList = weatherForecastDTOS.stream()
+    public void updateForecasts(List<WeatherResponseDTO> weatherResponseDTOS) {
+        List<WeatherForecast> forecastList = weatherResponseDTOS.stream()
                 .filter(dto -> {
                     if (dto.isHasError()) {
                         log.info(dto.getErrorMessage());
-                        return false;
+                        return false; //do not save failed entry
                     }
                     return true;
                 })
@@ -71,12 +69,12 @@ public class UpdateService {
         weatherForecastRepository.saveAll(forecastList);
     }
 
-    private WeatherForecast mapDtoToEntity(WeatherForecastDTO dto) {
+    private WeatherForecast mapDtoToEntity(WeatherResponseDTO dto) {
         //todo: map fields
         return new WeatherForecast(
                 dto.getUuid(),
-                dto.getLocation().getLatitude(),
-                dto.getLocation().getLongitude(),
+                dto.getLocationDTO().getLatitude(),
+                dto.getLocationDTO().getLongitude(),
                 dto.getTemperature(),
                 dto.getWindSpeed(),
                 dto.getForecastTime(),
