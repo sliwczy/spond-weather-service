@@ -26,10 +26,11 @@ class WeatherResponseMappingServiceTest {
     // if node matching works
     @Test
     public void testResponseInExpectedFormat() throws JsonProcessingException {
+        Optional<String> o = Optional.empty();
+
         WeatherForecastDTO dto = WeatherForecastDTO.builder()
                 .location(Location.builder().build())
                 .forecastTime(LocalDateTime.parse("2025-03-14T12:00:00"))
-                .errorMessage(Optional.empty())
                 .build();
         WeatherForecastDTO weatherForecast = mappingService.jsonToWeatherObj(
                 getJsonSample("sample_response.json"), dto);
@@ -43,7 +44,6 @@ class WeatherResponseMappingServiceTest {
         WeatherForecastDTO dto = WeatherForecastDTO.builder()
                 .location(Location.builder().build())
                 .forecastTime(LocalDateTime.parse("2025-03-14T12:00:00"))
-                .errorMessage(Optional.empty())
                 .build();
         assertThrows(JsonProcessingException.class,
                 () -> mappingService.jsonToWeatherObj("malformed", dto));

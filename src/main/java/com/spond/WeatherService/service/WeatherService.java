@@ -22,7 +22,6 @@ public class WeatherService {
     private final RabbitTemplate rabbitTemplate;
     private final WebClient webClient;
     private final WeatherResponseMappingService weatherMappingService;
-    //todo rate limit based on tokens
     private final Semaphore semaphore = new Semaphore(3);
 
     private static final String API_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact";
@@ -37,8 +36,7 @@ public class WeatherService {
 
         log.info("sending request to {}", url);
         webClient.get().uri(url)
-                //todo: according to met.no ToS pt.1 : "Identify yourself";
-                .header(USER_AGENT_HEADER, USER_AGENT_VALUE)
+                .header(USER_AGENT_HEADER, USER_AGENT_VALUE)//todo: according to met.no ToS pt.1 : "Identify yourself";
                 .retrieve().toEntity(String.class)
                 .subscribe(
                         (response) -> handleResponse(response, dto),
@@ -53,7 +51,6 @@ public class WeatherService {
     }
 
     private void handleError(Throwable error, WeatherForecastDTO dto) {
-        //todo: we let the client decide what to do in case e.g. Weather API is down. Client might decide to pause or stop sending messages
         log.info("error occurred: {}", error.getMessage());
         WeatherForecastDTO errorDto = WeatherForecastDTO.builder()
                 .uuid(dto.getUuid())
@@ -72,7 +69,6 @@ public class WeatherService {
         }
     }
 
-    //todo: should model 20/s rate as requrired by API, but just for local testing I put these numbers
     @Scheduled(fixedRate = 5000)
     private void releasePermits() {
         semaphore.release(3);
