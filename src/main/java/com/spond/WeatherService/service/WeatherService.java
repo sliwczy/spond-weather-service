@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
@@ -92,7 +93,7 @@ public class WeatherService {
 
     private Optional<MetWeatherResponseDTO.MetForecast> findForecastInTimeSeries(List<MetWeatherResponseDTO.MetForecast> timeSeries, LocalDateTime requestedForecastTime) {
         return timeSeries.stream()
-                .filter(entry -> entry.getForecastTime().equals(requestedForecastTime))
+                .filter(entry -> entry.getForecastTime().equals(requestedForecastTime.truncatedTo(ChronoUnit.HOURS)))
                 .findFirst();
     }
 }
