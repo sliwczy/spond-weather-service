@@ -1,18 +1,18 @@
-package com.spond.WeatherService.service;
+package com.spond.WeatherService.messaging;
 
 import com.spond.WeatherService.config.QueueConfig;
 import com.spond.WeatherService.dto.MetWeatherResponseDTO;
 import com.spond.WeatherService.dto.WeatherRequestDTO;
 import com.spond.WeatherService.dto.WeatherResponseDTO;
 import com.spond.WeatherService.exception.NoForecastException;
+import com.spond.WeatherService.client.MetWeatherApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -20,40 +20,28 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 
-@Slf4j
-@Service
 @RequiredArgsConstructor
-public class WeatherService {
+@Slf4j
+@Component
+public class WeatherForecastProcessor {
 
+    private final MetWeatherApiClient metWeatherApiClient;
     private final RabbitTemplate rabbitTemplate;
-    private final WebClient webClient;
     private final Semaphore semaphore = new Semaphore(3);
 
-    private static final String API_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact";
-    public static final String USER_AGENT_HEADER = "User-Agent";
-    private static final String USER_AGENT_VALUE = "SpondWeatherService github.com/sliwczy/spond-weather-service";
+    @Scheduled(fixedRate = 5000)
+    private void releasePermits() {
+        semaphore.release(3);
+    }
 
     @RabbitListener(queues = QueueConfig.WEATHER_REQUEST_QUEUE)
-    public void getWeatherInfo(WeatherRequestDTO requestDTO) throws InterruptedException {
+    public void getMetWeatherApiClient(WeatherRequestDTO requestDTO) throws InterruptedException {
         semaphore.acquire();
-        log.info("acquired token to proceed with weather request");
-        var url = getUrl(requestDTO.getLocationDTO().getLatitude(), requestDTO.getLocationDTO().getLongitude());
-
-        log.info("sending request to {}", url);
-        webClient.get().uri(url)
-                .header(USER_AGENT_HEADER, USER_AGENT_VALUE)//according to met.no ToS pt.1 : "Identify yourself";
-                .retrieve()
-                .toEntity(MetWeatherResponseDTO.class)
+        metWeatherApiClient.getWeatherInfo(requestDTO)
                 .subscribe(
                         (response) -> handleResponse(response, requestDTO),
                         (error) -> handleError(error, requestDTO)
                 );
-    }
-
-    private String getUrl(double latitude, double longitude) {
-        return new StringBuilder().append(API_URL).append("?")
-                .append("lat=").append(latitude)
-                .append("&lon=").append(longitude).toString();
     }
 
     private void handleError(Throwable error, WeatherRequestDTO originalRequestDTO) {
@@ -84,11 +72,6 @@ public class WeatherService {
                 .build();
         log.info("updated weather: {}", responseDto);
         rabbitTemplate.convertAndSend(QueueConfig.WEATHER_RESPONSE_QUEUE, responseDto);
-    }
-
-    @Scheduled(fixedRate = 5000)
-    private void releasePermits() {
-        semaphore.release(3);
     }
 
     private Optional<MetWeatherResponseDTO.MetForecast> findForecastInTimeSeries(List<MetWeatherResponseDTO.MetForecast> timeSeries, LocalDateTime requestedForecastTime) {

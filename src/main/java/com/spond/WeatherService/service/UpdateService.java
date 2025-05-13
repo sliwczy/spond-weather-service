@@ -6,6 +6,7 @@ import com.spond.WeatherService.dto.WeatherRequestDTO;
 import com.spond.WeatherService.dto.WeatherResponseDTO;
 import com.spond.WeatherService.entity.WeatherForecast;
 import com.spond.WeatherService.repository.WeatherForecastRepository;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -52,6 +53,7 @@ public class UpdateService {
     }
 
     //todo: reading in batch from the queue in order to limit the amount of connections to the DB
+    @Transactional
     @RabbitListener(queues = QueueConfig.WEATHER_RESPONSE_QUEUE, containerFactory = "batchContainerFactory")
     public void updateForecasts(List<WeatherResponseDTO> weatherResponseDTOS) {
         List<WeatherForecast> forecastList = weatherResponseDTOS.stream()
