@@ -17,9 +17,9 @@ public class WeatherResponseDTO implements Serializable {
     private static final long serialVersionUID = -4226275314805486112L;
     private final String uuid;
     @NonNull
-    private final LocationDTO locationDTO;
-    private double temperature;
-    private double windSpeed;
+    private final LocationResponseDTO locationDTO;
+    private final double temperature;
+    private final double windSpeed;
     @NonNull
     final LocalDateTime forecastTime;
     private final boolean hasError;

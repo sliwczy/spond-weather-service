@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class WeatherRequestDTO implements Serializable {
     private final String uuid;
     @NonNull
-    private final LocationDTO locationDTO;
+    private final LocationRequestDTO locationRequestDTO;
     @NonNull
     final LocalDateTime forecastTime;
 }

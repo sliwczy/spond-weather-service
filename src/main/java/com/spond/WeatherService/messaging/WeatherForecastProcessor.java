@@ -2,6 +2,7 @@ package com.spond.WeatherService.messaging;
 
 import com.spond.WeatherService.client.MetWeatherApiClient;
 import com.spond.WeatherService.config.QueueConfig;
+import com.spond.WeatherService.dto.LocationResponseDTO;
 import com.spond.WeatherService.dto.MetWeatherResponseDTO;
 import com.spond.WeatherService.dto.WeatherRequestDTO;
 import com.spond.WeatherService.dto.WeatherResponseDTO;
@@ -52,6 +53,13 @@ public class WeatherForecastProcessor {
         log.info("error occurred: {}", error.getMessage());
         WeatherResponseDTO errorDto = WeatherResponseDTO.builder()
                 .uuid(originalRequestDTO.getUuid())
+                .locationDTO(
+                        LocationResponseDTO.builder()
+                                .latitude(originalRequestDTO.getLocationRequestDTO().getLatitude())
+                                .longitude(originalRequestDTO.getLocationRequestDTO().getLongitude())
+                                .build()
+                )
+                .forecastTime(originalRequestDTO.getForecastTime())
                 .hasError(true)
                 .errorMessage(error.getMessage()).build();
         rabbitTemplate.convertAndSend(QueueConfig.WEATHER_RESPONSE_QUEUE, errorDto);
@@ -69,7 +77,13 @@ public class WeatherForecastProcessor {
 
         WeatherResponseDTO responseDto = WeatherResponseDTO.builder()
                 .uuid(originalRequestDTO.getUuid())
-                .locationDTO(originalRequestDTO.getLocationDTO())
+                .locationDTO(
+                        LocationResponseDTO.builder()
+                        .latitude(originalRequestDTO.getLocationRequestDTO().getLatitude())
+                        .longitude(originalRequestDTO.getLocationRequestDTO().getLongitude())
+                        .build()
+                )
+                .forecastTime(originalRequestDTO.getForecastTime())
                 .windSpeed(forecast.get().getWindSpeed())
                 .temperature(forecast.get().getTemperature())
                 .hasError(false)

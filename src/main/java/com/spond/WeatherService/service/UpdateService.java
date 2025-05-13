@@ -1,7 +1,7 @@
 package com.spond.WeatherService.service;
 
 import com.spond.WeatherService.config.QueueConfig;
-import com.spond.WeatherService.dto.LocationDTO;
+import com.spond.WeatherService.dto.LocationRequestDTO;
 import com.spond.WeatherService.dto.WeatherRequestDTO;
 import com.spond.WeatherService.dto.WeatherResponseDTO;
 import com.spond.WeatherService.entity.WeatherForecast;
@@ -37,7 +37,7 @@ public class UpdateService {
         expiredWeatherForecast.forEach(wf -> rabbitTemplate.convertAndSend(QueueConfig.WEATHER_REQUEST_QUEUE,
                 WeatherRequestDTO.builder()
                         .uuid(wf.getUuid())
-                        .locationDTO(LocationDTO.builder().latitude(wf.getLatitude()).longitude(wf.getLongitude()).build())
+                        .locationRequestDTO(LocationRequestDTO.builder().latitude(wf.getLatitude()).longitude(wf.getLongitude()).build())
                         .forecastTime(wf.getForecastTime())
                         .build()));
     }

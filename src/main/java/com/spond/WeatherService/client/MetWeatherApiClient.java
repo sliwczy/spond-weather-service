@@ -17,14 +17,13 @@ public class MetWeatherApiClient {
 
     private final WebClient webClient;
     @Value("${api.weather.url}")
-    private static String API_URL;
+    private String API_URL;
     public static final String USER_AGENT_HEADER = "User-Agent";
     @Value("${api.weather.user.agent}")
-    private static String USER_AGENT_VALUE;
+    private String USER_AGENT_VALUE;
 
     public Mono<ResponseEntity<MetWeatherResponseDTO>> getWeatherInfo(WeatherRequestDTO requestDTO) {
-        log.info("acquired token to proceed with weather request");
-        var url = getUrl(requestDTO.getLocationDTO().getLatitude(), requestDTO.getLocationDTO().getLongitude());
+        var url = getUrl(requestDTO.getLocationRequestDTO().getLatitude(), requestDTO.getLocationRequestDTO().getLongitude());
 
         log.info("sending request to {}", url);
         return webClient.get().uri(url)
@@ -38,5 +37,4 @@ public class MetWeatherApiClient {
                 .append("lat=").append(latitude)
                 .append("&lon=").append(longitude).toString();
     }
-
 }
