@@ -10,4 +10,4 @@ did not get enough time to create Dockerfiles to spin RabbitMQ and Weather servi
 but to run service :
 1) Ensure docker is installed and available in the command line
 2) run `docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:4.0-management`
-3) run `java -jar WeatherService.jar`
+3) run `java -jar WeatherService.jar --spring.profiles.active=prod`

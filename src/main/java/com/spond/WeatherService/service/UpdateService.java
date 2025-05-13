@@ -23,11 +23,9 @@ import java.util.UUID;
 @Service
 @AllArgsConstructor
 public class UpdateService {
-
     private final WeatherForecastRepository weatherForecastRepository;
     private final RabbitTemplate rabbitTemplate;
 
-    //todo: fixed rate could be set by a property to control DB polling rate
     @Scheduled(fixedRate = 20 * 1000)
     public void sendForUpdates() {
         List<WeatherForecast> expiredWeatherForecast = weatherForecastRepository.findExpiredWeatherForecast();
@@ -36,10 +34,6 @@ public class UpdateService {
         for(int i=0; i< 40; i++) {
            expiredWeatherForecast.add(weatherForecast());
         }
-
-//        expiredWeatherForecast = List.of(
-//                weatherForecast(), weatherForecast(), weatherForecast(), weatherForecast(), weatherForecast());
-
         expiredWeatherForecast.forEach(wf -> rabbitTemplate.convertAndSend(QueueConfig.WEATHER_REQUEST_QUEUE,
                 WeatherRequestDTO.builder()
                         .uuid(wf.getUuid())
@@ -52,7 +46,6 @@ public class UpdateService {
        return new WeatherForecast(UUID.randomUUID().toString(), 60.0, 50.0, 0, 0, LocalDateTime.now(), LocalDateTime.now());
     }
 
-    //todo: reading in batch from the queue in order to limit the amount of connections to the DB
     @Transactional
     @RabbitListener(queues = QueueConfig.WEATHER_RESPONSE_QUEUE, containerFactory = "batchContainerFactory")
     public void updateForecasts(List<WeatherResponseDTO> weatherResponseDTOS) {

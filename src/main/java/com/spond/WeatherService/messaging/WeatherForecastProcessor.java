@@ -1,15 +1,16 @@
 package com.spond.WeatherService.messaging;
 
+import com.spond.WeatherService.client.MetWeatherApiClient;
 import com.spond.WeatherService.config.QueueConfig;
 import com.spond.WeatherService.dto.MetWeatherResponseDTO;
 import com.spond.WeatherService.dto.WeatherRequestDTO;
 import com.spond.WeatherService.dto.WeatherResponseDTO;
 import com.spond.WeatherService.exception.NoForecastException;
-import com.spond.WeatherService.client.MetWeatherApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -25,13 +26,16 @@ import java.util.concurrent.Semaphore;
 @Component
 public class WeatherForecastProcessor {
 
+    @Value("${queue.weather.rq.rate}")
+    private int maxRequests;
+
     private final MetWeatherApiClient metWeatherApiClient;
     private final RabbitTemplate rabbitTemplate;
-    private final Semaphore semaphore = new Semaphore(3);
+    private final Semaphore semaphore = new Semaphore(maxRequests);
 
     @Scheduled(fixedRate = 5000)
     private void releasePermits() {
-        semaphore.release(3);
+        semaphore.release(maxRequests);
     }
 
     @RabbitListener(queues = QueueConfig.WEATHER_REQUEST_QUEUE)

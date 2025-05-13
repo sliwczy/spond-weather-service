@@ -4,6 +4,7 @@ import com.spond.WeatherService.dto.MetWeatherResponseDTO;
 import com.spond.WeatherService.dto.WeatherRequestDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -15,10 +16,11 @@ import reactor.core.publisher.Mono;
 public class MetWeatherApiClient {
 
     private final WebClient webClient;
-
-    private static final String API_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact";
+    @Value("${api.weather.url}")
+    private static String API_URL;
     public static final String USER_AGENT_HEADER = "User-Agent";
-    private static final String USER_AGENT_VALUE = "SpondWeatherService github.com/sliwczy/spond-weather-service";
+    @Value("${api.weather.user.agent}")
+    private static String USER_AGENT_VALUE;
 
     public Mono<ResponseEntity<MetWeatherResponseDTO>> getWeatherInfo(WeatherRequestDTO requestDTO) {
         log.info("acquired token to proceed with weather request");

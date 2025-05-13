@@ -5,6 +5,7 @@ import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFacto
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.SimpleMessageConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,11 +14,12 @@ import java.util.List;
 
 @Configuration
 public class QueueConfig {
+
+    @Value("${queue.weather.rs.prefetch.count}")
+    private int weatherResponsePrefetchCount;
     public static final String WEATHER_RESPONSE_QUEUE = "weather_response_queue";
     public static final String WEATHER_REQUEST_QUEUE = "weather_queue";
 
-    //todo: can be also regular java BlockingQueue; depends if WeatherService is to be polled over the network or is it just
-    //todo: a small addition to in the Event service
     @Bean
     public Queue requestQueue() {
             return new Queue(WEATHER_REQUEST_QUEUE, false);
@@ -51,8 +53,7 @@ public class QueueConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setMessageConverter(messageConverter);
         factory.setConnectionFactory(connectionFactory);
-        factory.setBatchSize(20);
-        factory.setPrefetchCount(20);
+        factory.setPrefetchCount(weatherResponsePrefetchCount);
         return factory;
     }
 }
